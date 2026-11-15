@@ -1,0 +1,95 @@
+name: build
+run-name: build ${{ inputs.job }}
+# One player's native mods, asked for through Starling's Compile service (worker/ here, on Cloudflare).
+# The service keeps the mods sealed in the `requests` release under a random name; the first job opens
+# them with the key in this run's inputs (scripts/unseal.sh reads it from the event and masks it) and
+# compiles them in the sandbox with no network. A mod's code runs while it compiles, so that job's token
+# can only read this public repository, and it writes no cache. The second job runs nothing of the mods:
+# it puts the library and its status in the `results` release, where the game downloads them, or what
+# went wrong, and lets the sealed mods go (scripts/publish.py).
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: The job the game follows (the mods and the commit's hash)
+        required: true
+      ask:
+        description: The sealed mods' name in the requests release
+        required: true
+      key:
+        description: What opens them; never written in this file, so never in the log
+        required: true
+      version:
+        description: A version in versions.json
+        required: true
+      tools:
+        description: The branch of starling-client/starling with the build scripts
+        default: starling
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      VERSION: ${{ inputs.version }}
+      TOOLS: ${{ inputs.tools }}
+      ASK: ${{ inputs.ask }}
+      JOB: ${{ inputs.job }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: The commit and the scripts
+        run: bash scripts/prepare.sh
+      - name: Make room
+        run: |
+          rm -rf "$HOME/.rustup" "$HOME/.cargo"
+          bash scripts/room.sh
+      - uses: actions/cache/restore@v4
+        with:
+          key: base-${{ env.COMMIT }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.rustup
+            ~/android
+            ~/modbuild/cargo
+            ~/modbuild/base
+      - name: The mods
+        run: bash scripts/unseal.sh
+      - name: Build
+        env:
+          MOD_BUILD_SECONDS: '3200'
+        run: python3 tools/mod_build_once.py mods.bin "$COMMIT" result
+      - uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: result/
+          retention-days: 1
+          compression-level: 1
+          if-no-files-found: error
+  publish:
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      JOB: ${{ inputs.job }}
+      ASK: ${{ inputs.ask }}
+      BUILT: ${{ needs.build.result }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: needs.build.result == 'success'
+        continue-on-error: true
+        with:
+          name: result
+          path: result/
+      - name: The answer
+        run: python3 scripts/publish.py
