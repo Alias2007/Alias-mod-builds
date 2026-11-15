@@ -3,9 +3,7 @@
 ## 1. GitHub repository
 Keep this repository public if you want the Worker to download release assets without authentication. Do not commit tokens or private keys.
 
-Create two GitHub Releases (no source code needed):
-- tag: `requests`, title: `Build requests`
-- tag: `results`, title: `Build results`
+Run the one-time workflow: Actions → `initialize-releases` → Run workflow. It creates the two required releases (`requests` and `results`) automatically.
 
 The API stores encrypted incoming mod bundles in `requests` and compiled libraries/status files in `results`.
 
