@@ -1,0 +1,16 @@
+name: initialize-releases
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create request and result releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view requests --repo "$GH_REPO" >/dev/null 2>&1 || gh release create requests --repo "$GH_REPO" --title "Build requests" --notes "Encrypted incoming native-mod build requests."
+          gh release view results --repo "$GH_REPO" >/dev/null 2>&1 || gh release create results --repo "$GH_REPO" --title "Build results" --notes "Compiled native libraries and job status files."
