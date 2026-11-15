@@ -21,6 +21,21 @@ for name in mod_build_sandbox.sh mod_build_server.py mod_build_once.py; do
     "https://raw.githubusercontent.com/starling-client/starling/${TOOLS:-starling}/packaging/android/$name"
 done
 
+# Patch only the extracted legacy Baritone bundle, before the sandbox makes mod sources read-only.
+python3 - <<'PY'
+from pathlib import Path
+
+path = Path("tools/mod_build_sandbox.sh")
+text = path.read_text(encoding="utf-8")
+hook = 'python3 "$GITHUB_WORKSPACE/scripts/adapt-baritone.py" "$job/mods"\n'
+if hook not in text:
+    marker = "job=$3\n"
+    if marker not in text:
+        raise SystemExit("Could not place the Baritone compatibility adapter in the build script.")
+    text = text.replace(marker, marker + hook, 1)
+    path.write_text(text, encoding="utf-8")
+PY
+
 root=$HOME/modbuild
 mkdir -p "$root/jobs" "$root/base"
 git init -q "$root/source"
