@@ -24,6 +24,8 @@ const VERSIONS = `https://raw.githubusercontent.com/${REPO}/main/versions.json`;
 const WORKFLOW = "build.yml";
 const REQUESTS = "requests";
 const RESULTS = "results";
+// Bump when build-side mod compatibility changes, so settled old failures are not reused.
+const BUILD_REVISION = "native-adapter-1";
 
 // What the game sends at most (its LARGEST_REQUEST).
 export const MAX_BODY = 32 << 20;
@@ -148,7 +150,7 @@ function library(job) {
 
 /** The job of these mods on this commit: the same mods ask for the same build. */
 export async function jobOf(version, commit, body) {
-  const asked = new TextEncoder().encode(`/v1/build?version=${version}&commit=${commit}`);
+  const asked = new TextEncoder().encode(`/v1/build?version=${version}&commit=${commit}&build=${BUILD_REVISION}`);
   const all = new Uint8Array(asked.length + body.length);
   all.set(asked);
   all.set(body, asked.length);
