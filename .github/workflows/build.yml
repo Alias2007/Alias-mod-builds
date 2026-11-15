@@ -49,7 +49,7 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           key: base-${{ env.COMMIT }}
-          fail-on-cache-miss: true
+          fail-on-cache-miss: false
           path: |
             ~/.rustup
             ~/android
