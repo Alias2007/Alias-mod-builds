@@ -15,7 +15,7 @@ rm mods.sealed
 python3 - <<'EOF'
 import hashlib, os, sys
 body = open("mods.bin", "rb").read()
-asked = f"/v1/build?version={os.environ['VERSION']}&commit={os.environ['COMMIT']}".encode()
+asked = f"/v1/build?version={os.environ['VERSION']}&commit={os.environ['COMMIT']}&build=native-adapter-1".encode()
 if hashlib.sha256(asked + body).hexdigest()[:24] != os.environ["JOB"]:
     sys.exit("The mods are not the ones that were asked for.")
 print(f"{len(body)} bytes of mods")
